@@ -1,39 +1,39 @@
-const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios');
+import { HfInference } from "@huggingface/inference";
+import TelegramBot from "node-telegram-bot-api";
+import fs from "fs";
+import path from "path";
 
-// API keys
-const TELEGRAM_BOT_TOKEN = '7451898047:AAEo0edInxLogsU9rl6h0W0PjSQ1mg0omls';
-const HUGGING_FACE_API_KEY = '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';  // Your Hugging Face API key
+// API Keys
+const TELEGRAM_BOT_TOKEN = "7451898047:AAEo0edInxLogsU9rl6h0W0PjSQ1mg0omls";
+const HUGGING_FACE_API_KEY = "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";
+
+// Initialize Hugging Face Inference Client
+const hf = new HfInference(HUGGING_FACE_API_KEY);
 
 // Initialize Telegram Bot
 const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
-// Inference API URL for FLUX.1-dev
-const API_URL = 'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev';
-
-// Function to generate an image using FLUX.1-dev
+// Function to generate an image
 async function generateImage(prompt) {
     try {
-        const response = await axios.post(
-            API_URL,
-            { inputs: prompt },
-            {
-                headers: {
-                    'Authorization': `Bearer ${HUGGING_FACE_API_KEY}`,
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
+        console.log(`Generating image for: "${prompt}"`);
+        
+        const imageBlob = await hf.textToImage({
+            model: "black-forest-labs/FLUX.1-dev",
+            inputs: prompt,
+            parameters: { num_inference_steps: 5 },
+            provider: "together",
+        });
 
-        // Check if the image URL exists in the response
-        if (response.data && response.data[0] && response.data[0].url) {
-            return response.data[0].url;
-        } else {
-            throw new Error('No image URL found in the response');
-        }
+        // Save the image locally
+        const imagePath = path.join(process.cwd(), "output.png");
+        const buffer = Buffer.from(await imageBlob.arrayBuffer());
+        fs.writeFileSync(imagePath, buffer);
+
+        return imagePath;
     } catch (error) {
-        console.error('Error generating image:', error.message);
-        throw error;
+        console.error("Error generating image:", error);
+        throw new Error("Image generation failed.");
     }
 }
 
@@ -43,21 +43,16 @@ bot.onText(/\/gen (.+)/, async (msg, match) => {
     const prompt = match[1];
 
     try {
-        // Notify user that the image is being generated
         await bot.sendMessage(chatId, `Generating image for: "${prompt}"...`);
-
-        // Generate the image
-        const imageUrl = await generateImage(prompt);
-
-        // Send the image to Telegram
-        await bot.sendPhoto(chatId, imageUrl);
+        const imagePath = await generateImage(prompt);
+        await bot.sendPhoto(chatId, imagePath);
     } catch (error) {
-        await bot.sendMessage(chatId, 'Failed to generate an image. Please try again later.');
+        await bot.sendMessage(chatId, "Failed to generate an image. Please try again later.");
     }
 });
 
 // Handle "/start" command
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Welcome! Use /gen "your prompt" to generate an image.');
+    bot.sendMessage(chatId, "Welcome! Use /gen 'your prompt' to generate an image.");
 });
