@@ -1,17 +1,18 @@
 {
-  "name": "telegram-bot-image-generator",
+  "name": "telegram-image-generator-bot",
   "version": "1.0.0",
-  "description": "Telegram bot to generate images using Hugging Face API (Replicate)",
+  "description": "Telegram bot that generates images using Hugging Face inference API",
   "main": "bot.js",
+  "type": "module",
   "scripts": {
     "start": "node bot.js"
   },
   "dependencies": {
-    "axios": "^0.26.1",
-    "node-telegram-bot-api": "^0.53.0"
+    "@huggingface/inference": "^2.5.0",
+    "node-telegram-bot-api": "^0.61.0"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "author": "Zone",
   "license": "MIT"
