@@ -1,4 +1,4 @@
 python-telegram-bot
-transformers
-diffusers
+transformers diffusers
 torch
+huggingface_hub
