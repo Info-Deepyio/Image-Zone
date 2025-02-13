@@ -1,7 +1,7 @@
 {
   "name": "telegram-image-generator-bot",
   "version": "1.0.0",
-  "description": "Telegram bot that generates images using Hugging Face inference API",
+  "description": "Telegram bot that generates images using Hugging Face inference API with Persian translation support",
   "main": "bot.js",
   "type": "module",
   "scripts": {
@@ -9,7 +9,10 @@
   },
   "dependencies": {
     "@huggingface/inference": "^2.5.0",
-    "node-telegram-bot-api": "^0.61.0"
+    "@google-cloud/translate": "^7.2.0",
+    "node-telegram-bot-api": "^0.61.0",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7"
   },
   "engines": {
     "node": ">=18.0.0"
