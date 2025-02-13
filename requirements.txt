@@ -1,2 +1,2 @@
+replicate
 python-telegram-bot
-requests
