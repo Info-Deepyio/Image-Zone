@@ -8,7 +8,7 @@ const TELEGRAM_BOT_TOKEN = "7451898047:AAEo0edInxLogsU9rl6h0W0PjSQ1mg0omls";
 const HUGGING_FACE_API_KEY = "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";
 
 // Restrict bot to a specific Telegram group (Replace with your group's ID)
-const ALLOWED_GROUP_ID = -1234567890; // Example: -1001122334455 for supergroups
+const ALLOWED_GROUP_ID =-1002307718681; // Example: -1001122334455 for supergroups
 
 // Initialize Hugging Face Inference Client
 const hf = new HfInference(HUGGING_FACE_API_KEY);
