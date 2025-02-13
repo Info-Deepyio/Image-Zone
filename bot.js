@@ -1,19 +1,17 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
-const { Readable } = require('stream');
-const fs = require('fs');
 
-// API Keys
+// API keys
 const TELEGRAM_BOT_TOKEN = '7451898047:AAEo0edInxLogsU9rl6h0W0PjSQ1mg0omls';
-const HUGGING_FACE_API_KEY = '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';
+const HUGGING_FACE_API_KEY = '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';  // Your Hugging Face API key
 
 // Initialize Telegram Bot
 const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
-// Inference API URL for FLUX.1-schnell
-const API_URL = 'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell';
+// Inference API URL for FLUX.1-dev
+const API_URL = 'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev';
 
-// Function to generate an image using FLUX.1-schnell
+// Function to generate an image using FLUX.1-dev
 async function generateImage(prompt) {
     try {
         const response = await axios.post(
