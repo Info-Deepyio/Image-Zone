@@ -1,5 +1,2 @@
 python-telegram-bot
-transformers
-diffusers
-torch
-huggingface_hub
+requests
