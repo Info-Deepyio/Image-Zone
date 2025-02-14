@@ -4,7 +4,7 @@ const numeral = require('numeral'); // For number formatting
 
 // Replace with your bot token and target chat ID
 const token = '7770849244:AAHwUn9N11ZzgwVcSUugQD-2a-UjpVnMsGg';
-const targetChatId = -1002286986056; // Target group chat ID
+const targetChatId =-1002286986056; // Target group chat ID
 let isActive = false;
 let ownerID = null; // To store the owner's user ID
 let isActivatedOnce = false; // Flag to track if the bot has been activated once
