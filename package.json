@@ -1,15 +1,13 @@
 {
   "name": "telegram-welcome-bot",
   "version": "1.0.0",
-  "description": "A Telegram bot that welcomes new users, shows Iranian date, and handles group interactions.",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
   },
   "dependencies": {
-    "node-telegram-bot-api": "^0.55.0",
-    "moment-jalaali": "^0.8.0"
-  },
-  "author": "",
-  "license": "ISC"
+    "node-telegram-bot-api": "^0.58.0",
+    "numeral": "^2.0.6",
+    "moment-jalaali": "^0.9.1"
+  }
 }
