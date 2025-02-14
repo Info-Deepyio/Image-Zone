@@ -1,14 +1,10 @@
 import { HfInference } from "@huggingface/inference";
 import TelegramBot from "node-telegram-bot-api";
-import fs from "fs";
-import path from "path";
 
-// API Keys (Same as original script)
+// Your Telegram Bot Token
 const TELEGRAM_BOT_TOKEN = "7451898047:AAEo0edInxLogsU9rl6h0W0PjSQ1mg0omls";
+// Your Hugging Face API Key
 const HUGGING_FACE_API_KEY = "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";
-
-// Restrict bot to a specific Telegram group (Replace with your group's ID)
-const ALLOWED_GROUP_ID =-1002307718681; // Example: -1001122334455 for supergroups
 
 // Initialize Hugging Face Inference Client
 const hf = new HfInference(HUGGING_FACE_API_KEY);
@@ -16,70 +12,45 @@ const hf = new HfInference(HUGGING_FACE_API_KEY);
 // Initialize Telegram Bot
 const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
 
-// Flag to prevent simultaneous image generation
-let isGenerating = false;
-
-// Function to generate an image
-async function generateImage(prompt) {
+// Function to handle user messages and interact with Hugging Face API
+async function handleUserMessage(chatId, message) {
     try {
-        console.log(`Generating image for: "${prompt}"`);
-
-        const imageBlob = await hf.textToImage({
-            model: "black-forest-labs/FLUX.1-dev",
-            inputs: prompt,
-            parameters: { num_inference_steps: 5 },
+        // Use the chat model to process the user's message
+        const chatCompletion = await hf.chatCompletion({
+            model: "deepseek-ai/DeepSeek-R1",
+            messages: [
+                {
+                    role: "user",
+                    content: message
+                }
+            ],
             provider: "together",
+            max_tokens: 500,
         });
 
-        // Save the image locally
-        const imagePath = path.join(process.cwd(), "output.png");
-        const buffer = Buffer.from(await imageBlob.arrayBuffer());
-        fs.writeFileSync(imagePath, buffer);
-
-        return imagePath;
+        // Send the response back to the Telegram chat
+        const botResponse = chatCompletion.choices[0].message.content;
+        bot.sendMessage(chatId, botResponse);
     } catch (error) {
-        console.error("Error generating image:", error);
-        throw new Error("Image generation failed.");
+        console.error("Error handling user message:", error);
+        bot.sendMessage(chatId, "Sorry, something went wrong. Please try again later.");
     }
 }
 
-// Handle "/gen" command
-bot.onText(/\/gen (.+)/, async (msg, match) => {
+// Listen for text messages
+bot.on("message", (msg) => {
     const chatId = msg.chat.id;
-    const prompt = match[1];
+    const userMessage = msg.text;
 
-    // Check if the command is used in the allowed group
-    if (chatId !== ALLOWED_GROUP_ID) {
-        return;
-    }
+    // Send typing indicator to let the user know the bot is processing their request
+    bot.sendChatAction(chatId, "typing");
 
-    // Prevent multiple requests at the same time
-    if (isGenerating) {
-        bot.sendMessage(chatId, "Please wait, an image is already being generated.");
-        return;
-    }
-
-    isGenerating = true; // Lock generation process
-
-    try {
-        await bot.sendMessage(chatId, `Generating image for: "${prompt}"...`);
-        const imagePath = await generateImage(prompt);
-        await bot.sendPhoto(chatId, imagePath);
-    } catch (error) {
-        await bot.sendMessage(chatId, "Failed to generate an image. Please try again later.");
-    } finally {
-        isGenerating = false; // Unlock after completion
-    }
+    // Handle the user message and get a response from the model
+    handleUserMessage(chatId, userMessage);
 });
 
 // Handle "/start" command
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-
-    // Allow "/start" only in the allowed group
-    if (chatId !== ALLOWED_GROUP_ID) {
-        return;
-    }
-
-    bot.sendMessage(chatId, "Welcome! Use /gen 'your prompt' to generate an image.");
+    bot.sendMessage(chatId, "Hello! I'm your assistant bot. You can ask me questions.");
 });
