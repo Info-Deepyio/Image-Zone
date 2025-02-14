@@ -1,14 +1,14 @@
 {
-  "name": "telegram-youtube-bot",
+  "name": "telegram-welcome-bot",
   "version": "1.0.0",
-  "description": "A simple Telegram bot to download YouTube videos",
+  "description": "A Telegram bot that welcomes new users, shows Iranian date, and handles group interactions.",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
   },
   "dependencies": {
     "node-telegram-bot-api": "^0.55.0",
-    "ytdl-core": "^4.9.0"
+    "moment-jalaali": "^0.8.0"
   },
   "author": "",
   "license": "ISC"
