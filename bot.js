@@ -79,7 +79,22 @@ function generatePurposeMessage() {
 
 🎉 اینجا جایی است که می\\-توانید تجربیات خود را به اشتراک بگذارید، نظرات خود را ابراز کنید و با افرادی که علاقه\\-مند به ماینکرفت هستند، تعامل داشته باشید\\.
 
+💡 برای مشاهده قوانین گروه، دکمه » را کلیک کنید\\.
 💡 برای بازگشت به پیام خوش آمدگویی، دکمه « را کلیک کنید\\.
+  `;
+  return formattedMessage;
+}
+
+// Group rules message with fixed bold formatting (MarkdownV2)
+function generateRulesMessage() {
+  const formattedMessage = `
+👾 *قوانـــــین گــــــروه* 👾
+
+❌️ *بـــی احتــرامــی مـمــنوع*
+
+✅️ *آزادی بــــیــان*
+
+💡 برای بازگشت به معرفی گروه، دکمه « را کلیک کنید\\.
   `;
   return formattedMessage;
 }
@@ -95,7 +110,15 @@ function createKeyboard(page) {
   } else if (page === 'purpose') {
     return {
       reply_markup: JSON.stringify({
-        inline_keyboard: [[{ text: '«', callback_data: 'welcome' }]],
+        inline_keyboard: [
+          [{ text: '«', callback_data: 'welcome' }, { text: '»', callback_data: 'rules' }]
+        ],
+      }),
+    };
+  } else if (page === 'rules') {
+    return {
+      reply_markup: JSON.stringify({
+        inline_keyboard: [[{ text: '«', callback_data: 'purpose' }]],
       }),
     };
   }
@@ -169,6 +192,9 @@ bot.on('callback_query', async (query) => {
       const user = query.from;
       messageText = generateWelcomeMessage(user);
       keyboard = createKeyboard('welcome');
+    } else if (data === 'rules') {
+      messageText = generateRulesMessage();
+      keyboard = createKeyboard('rules');
     }
 
     bot.editMessageText(messageText, {
