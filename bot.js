@@ -1,10 +1,12 @@
+javascript
 const TelegramBot = require('node-telegram-bot-api');
-const moment = require('moment-jalaali'); // For Iranian calendar
+const moment = require('moment-timezone'); // Changed to moment-timezone
+const momentJalaali = require('moment-jalaali'); // For Iranian calendar
 const numeral = require('numeral'); // For number formatting
 
 // Replace with your bot token and target chat ID
 const token = '7770849244:AAHwUn9N11ZzgwVcSUugQD-2a-UjpVnMsGg';
-const targetChatId =-1002286986056; // Target group chat ID
+const targetChatId = -1002286986056; // Target group chat ID
 let isActive = false;
 let ownerID = null; // To store the owner's user ID
 let isActivatedOnce = false; // Flag to track if the bot has been activated once
@@ -20,23 +22,25 @@ function toPersianNumerals(str) {
 
 // Function to get current Iranian date and time
 function getIranianDateTime() {
-  const now = moment().tz('Asia/Tehran').jDate();
-  const jalaliDate = now.format('jYYYY/jMM/jDD');
-  const time = now.format('HH:mm:ss');
+  const tehranTime = moment().tz('Asia/Tehran');
+  const jalaliDate = momentJalaali(tehranTime).format('jYYYY/jMM/jDD');
+  const time = tehranTime.format('HH:mm:ss');
   return `${toPersianNumerals(jalaliDate)} ساعت ${toPersianNumerals(time)}`;
 }
 
 // Welcome message with fixed bold formatting (MarkdownV2)
 function generateWelcomeMessage(user) {
   const iranianDateTime = getIranianDateTime();
+  const userName = user.first_name ? user.first_name.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&') : 'دوست عزیز';
+  
   const formattedMessage = `
-🌟 *خوش آمدید، عزیز* ${user.first_name || 'دوست عزیز'}! 🌟
+🌟 *خوش آمدید، عزیز* ${userName}\\! 🌟
 
 ⏰ *زمان ورود شما:* ${iranianDateTime}
 
-✨ ما خوشحالیم که شما به این گروه پیوستید\. امیدواریم زمان لذت\-بخشی در اینجا سپری کنید\!
+✨ ما خوشحالیم که شما به این گروه پیوستید\\. امیدواریم زمان لذت\\-بخشی در اینجا سپری کنید\\!
 
-💡 برای مشاهده هدف و معرفی گروه، دکمه » را کلیک کنید\.
+💡 برای مشاهده هدف و معرفی گروه، دکمه » را کلیک کنید\\.
   `;
   return formattedMessage;
 }
@@ -46,11 +50,11 @@ function generatePurposeMessage() {
   const formattedMessage = `
 🎮 *هدف و معرفی گروه:*
 
-🌟 این گروه فضایی است برای **چت کردن با دوستان و مردمی که از بازی ماینکرفت خوششان می\-آید**\. 
+🌟 این گروه فضایی است برای *چت کردن با دوستان و مردمی که از بازی ماینکرفت خوششان می\\-آید*\\. 
 
-🎉 اینجا جایی است که می\-توانید تجربیات خود را به اشتراک بگذارید، نظرات خود را ابراز کنید و با افرادی که علاقه\-مند به ماینکرفت هستند، تعامل داشته باشید\.
+🎉 اینجا جایی است که می\\-توانید تجربیات خود را به اشتراک بگذارید، نظرات خود را ابراز کنید و با افرادی که علاقه\\-مند به ماینکرفت هستند، تعامل داشته باشید\\.
 
-💡 برای بازگشت به پیام خوش آمدگویی، دکمه « را کلیک کنید\.
+💡 برای بازگشت به پیام خوش آمدگویی، دکمه « را کلیک کنید\\.
   `;
   return formattedMessage;
 }
@@ -86,17 +90,21 @@ bot.on('message', async (msg) => {
           msg.chat.id,
           welcomeMessage,
           { parse_mode: 'MarkdownV2', ...createKeyboard('welcome') }
-        );
+        ).catch(err => console.error('Error sending welcome message:', err.message));
       });
     }
 
     // Detect and set the owner/admins when the bot starts
     if (!ownerID && msg.chat.id === targetChatId) {
-      const admins = await bot.getChatAdministrators(targetChatId);
-      const creator = admins.find((admin) => admin.status === 'creator');
-      if (creator) {
-        ownerID = creator.user.id;
-        console.log(`Owner detected: ${ownerID}`);
+      try {
+        const admins = await bot.getChatAdministrators(targetChatId);
+        const creator = admins.find((admin) => admin.status === 'creator');
+        if (creator) {
+          ownerID = creator.user.id;
+          console.log(`Owner detected: ${ownerID}`);
+        }
+      } catch (error) {
+        console.error('Error getting chat administrators:', error);
       }
     }
   } catch (error) {
@@ -116,7 +124,8 @@ bot.on('callback_query', async (query) => {
       messageText = generatePurposeMessage();
       keyboard = createKeyboard('purpose');
     } else if (data === 'welcome') {
-      const user = query.message.reply_to_message.from;
+      // Check if reply_to_message exists before accessing
+      const user = query.from;
       messageText = generateWelcomeMessage(user);
       keyboard = createKeyboard('welcome');
     }
@@ -126,7 +135,7 @@ bot.on('callback_query', async (query) => {
       message_id: query.message.message_id,
       parse_mode: 'MarkdownV2',
       ...keyboard,
-    });
+    }).catch(err => console.error('Error editing message:', err.message));
   } catch (error) {
     console.error('Error handling callback query:', error);
   }
@@ -139,11 +148,16 @@ bot.onText(/\/start|فعال/, async (msg) => {
 
     // Ensure only the owner can activate the bot
     if (!ownerID) {
-      const admins = await bot.getChatAdministrators(targetChatId);
-      const creator = admins.find((admin) => admin.status === 'creator');
-      if (creator) {
-        ownerID = creator.user.id;
-        console.log(`Owner detected: ${ownerID}`);
+      try {
+        const admins = await bot.getChatAdministrators(targetChatId);
+        const creator = admins.find((admin) => admin.status === 'creator');
+        if (creator) {
+          ownerID = creator.user.id;
+          console.log(`Owner detected: ${ownerID}`);
+        }
+      } catch (error) {
+        console.error('Error getting chat administrators:', error);
+        return;
       }
     }
 
@@ -151,11 +165,13 @@ bot.onText(/\/start|فعال/, async (msg) => {
       if (!isActivatedOnce) {
         isActive = true;
         isActivatedOnce = true;
-        bot.sendMessage(msg.chat.id, '*🤖 ربات فعال شد\!* ✅', { parse_mode: 'MarkdownV2' });
+        bot.sendMessage(msg.chat.id, '*🤖 ربات فعال شد\\!* ✅', { parse_mode: 'MarkdownV2' })
+          .catch(err => console.error('Error sending activation message:', err.message));
       }
       // Do not respond if already activated
     } else {
-      bot.sendMessage(msg.chat.id, '⚠️ فقط صاحب گروه می‌تواند ربات را فعال کند\.', { parse_mode: 'MarkdownV2' });
+      bot.sendMessage(msg.chat.id, '⚠️ فقط صاحب گروه می\\‌تواند ربات را فعال کند\\.', { parse_mode: 'MarkdownV2' })
+        .catch(err => console.error('Error sending unauthorized message:', err.message));
     }
   } catch (error) {
     console.error('Error handling activation:', error);
@@ -170,11 +186,12 @@ function sendMidnightGreeting() {
     const currentTime = moment().tz('Asia/Tehran').format('HH:mm');
     if (currentTime === '00:00') {
       const midnightMessage = `
-🌙 *شب بخیر\!* 🌙
+🌙 *شب بخیر\\!* 🌙
 
-💤 امیدواریم شبی آرام و خوشبخت برای شما در پی داشته باشد\. خواب خوب 💤
+💤 امیدواریم شبی آرام و خوشبخت برای شما در پی داشته باشد\\. خواب خوب 💤
       `;
-      bot.sendMessage(targetChatId, midnightMessage, { parse_mode: 'MarkdownV2' });
+      bot.sendMessage(targetChatId, midnightMessage, { parse_mode: 'MarkdownV2' })
+        .catch(err => console.error('Error sending midnight greeting:', err.message));
     }
   } catch (error) {
     console.error('Error sending midnight greeting:', error);
