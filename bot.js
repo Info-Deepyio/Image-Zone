@@ -2,11 +2,11 @@ const TelegramBot = require('node-telegram-bot-api');
 const moment = require('moment-jalaali');
 
 // Replace with your Telegram bot token
-const token = '7112444058:AAEN7XLWZ1A-CqF0VVEX3iJrdjMZ2TaLhwc';
+const token = '7770849244:AAHwUn9N11ZzgwVcSUugQD-2a-UjpVnMsGg';
 const bot = new TelegramBot(token, { polling: true });
 
 // The allowed chat ID (replace with your desired chat ID)
-const allowedChatId = 'YOUR_SPECIFIC_CHAT_ID';  // Example: '123456789'
+const allowedChatId =-4694105036;  // Example: '123456789'
 
 // Define a variable to track whether the bot is enabled
 let botEnabled = false;
