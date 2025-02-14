@@ -30,7 +30,7 @@ function getIranianDateTime() {
 function generateWelcomeMessage(user) {
   const iranianDateTime = getIranianDateTime();
   const formattedMessage = `
-🌟 *خوش آمدید، عزیز* ${user.first_name}! 🌟
+🌟 *خوش آمدید، عزیز* ${user.first_name || 'دوست عزیز'}! 🌟
 
 ⏰ *زمان ورود شما:* ${iranianDateTime}
 
@@ -74,100 +74,110 @@ function createKeyboard(page) {
 
 // Handler for new chat members
 bot.on('message', async (msg) => {
-  if (!isActive || msg.chat.id !== targetChatId) return;
+  try {
+    // Ensure the bot only operates in the specified chat
+    if (!isActive || msg.chat.id !== targetChatId) return;
 
-  if (msg.new_chat_members) {
-    msg.new_chat_members.forEach((user) => {
-      const welcomeMessage = generateWelcomeMessage(user);
-      bot.sendMessage(
-        msg.chat.id,
-        welcomeMessage,
-        { parse_mode: 'MarkdownV2', ...createKeyboard('welcome') }
-      );
-    });
-  }
+    // Detect new chat members
+    if (msg.new_chat_members) {
+      msg.new_chat_members.forEach((user) => {
+        const welcomeMessage = generateWelcomeMessage(user);
+        bot.sendMessage(
+          msg.chat.id,
+          welcomeMessage,
+          { parse_mode: 'MarkdownV2', ...createKeyboard('welcome') }
+        );
+      });
+    }
 
-  // Detect and set the owner/admins when the bot starts
-  if (!ownerID && msg.chat.id === targetChatId) {
-    try {
+    // Detect and set the owner/admins when the bot starts
+    if (!ownerID && msg.chat.id === targetChatId) {
       const admins = await bot.getChatAdministrators(targetChatId);
       const creator = admins.find((admin) => admin.status === 'creator');
       if (creator) {
         ownerID = creator.user.id;
         console.log(`Owner detected: ${ownerID}`);
       }
-    } catch (error) {
-      console.error('Error fetching admins:', error);
     }
+  } catch (error) {
+    console.error('Error handling message:', error);
   }
 });
 
 // Handler for callback queries
-bot.on('callback_query', (query) => {
-  if (!isActive || query.message.chat.id !== targetChatId) return;
+bot.on('callback_query', async (query) => {
+  try {
+    if (!isActive || query.message.chat.id !== targetChatId) return;
 
-  const data = query.data;
-  let messageText, keyboard;
+    const data = query.data;
+    let messageText, keyboard;
 
-  if (data === 'purpose') {
-    messageText = generatePurposeMessage();
-    keyboard = createKeyboard('purpose');
-  } else if (data === 'welcome') {
-    const user = query.message.reply_to_message.from;
-    messageText = generateWelcomeMessage(user);
-    keyboard = createKeyboard('welcome');
+    if (data === 'purpose') {
+      messageText = generatePurposeMessage();
+      keyboard = createKeyboard('purpose');
+    } else if (data === 'welcome') {
+      const user = query.message.reply_to_message.from;
+      messageText = generateWelcomeMessage(user);
+      keyboard = createKeyboard('welcome');
+    }
+
+    bot.editMessageText(messageText, {
+      chat_id: query.message.chat.id,
+      message_id: query.message.message_id,
+      parse_mode: 'MarkdownV2',
+      ...keyboard,
+    });
+  } catch (error) {
+    console.error('Error handling callback query:', error);
   }
-
-  bot.editMessageText(messageText, {
-    chat_id: query.message.chat.id,
-    message_id: query.message.message_id,
-    parse_mode: 'MarkdownV2',
-    ...keyboard,
-  });
 });
 
 // Activation command
 bot.onText(/\/start|فعال/, async (msg) => {
-  if (msg.chat.id !== targetChatId) return;
+  try {
+    if (msg.chat.id !== targetChatId) return;
 
-  // Ensure only the owner can activate the bot
-  if (!ownerID) {
-    try {
+    // Ensure only the owner can activate the bot
+    if (!ownerID) {
       const admins = await bot.getChatAdministrators(targetChatId);
       const creator = admins.find((admin) => admin.status === 'creator');
       if (creator) {
         ownerID = creator.user.id;
         console.log(`Owner detected: ${ownerID}`);
       }
-    } catch (error) {
-      console.error('Error fetching admins:', error);
     }
-  }
 
-  if (msg.from.id === ownerID) {
-    if (!isActivatedOnce) {
-      isActive = true;
-      isActivatedOnce = true;
-      bot.sendMessage(msg.chat.id, '*🤖 ربات فعال شد\!* ✅', { parse_mode: 'MarkdownV2' });
+    if (msg.from.id === ownerID) {
+      if (!isActivatedOnce) {
+        isActive = true;
+        isActivatedOnce = true;
+        bot.sendMessage(msg.chat.id, '*🤖 ربات فعال شد\!* ✅', { parse_mode: 'MarkdownV2' });
+      }
+      // Do not respond if already activated
+    } else {
+      bot.sendMessage(msg.chat.id, '⚠️ فقط صاحب گروه می‌تواند ربات را فعال کند\.', { parse_mode: 'MarkdownV2' });
     }
-    // Do not respond if already activated
-  } else {
-    bot.sendMessage(msg.chat.id, '⚠️ فقط صاحب گروه می‌تواند ربات را فعال کند\.', { parse_mode: 'MarkdownV2' });
+  } catch (error) {
+    console.error('Error handling activation:', error);
   }
 });
 
 // Midnight greeting
 function sendMidnightGreeting() {
-  if (!isActive) return;
+  try {
+    if (!isActive) return;
 
-  const currentTime = moment().tz('Asia/Tehran').format('HH:mm');
-  if (currentTime === '00:00') {
-    const midnightMessage = `
+    const currentTime = moment().tz('Asia/Tehran').format('HH:mm');
+    if (currentTime === '00:00') {
+      const midnightMessage = `
 🌙 *شب بخیر\!* 🌙
 
 💤 امیدواریم شبی آرام و خوشبخت برای شما در پی داشته باشد\. خواب خوب 💤
-    `;
-    bot.sendMessage(targetChatId, midnightMessage, { parse_mode: 'MarkdownV2' });
+      `;
+      bot.sendMessage(targetChatId, midnightMessage, { parse_mode: 'MarkdownV2' });
+    }
+  } catch (error) {
+    console.error('Error sending midnight greeting:', error);
   }
 }
 
