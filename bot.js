@@ -1,57 +1,48 @@
-const { HfInference } = require('@huggingface/inference');
 const TelegramBot = require('node-telegram-bot-api');
+const ytdl = require('ytdl-core');
+const fs = require('fs');
 
-// Your Telegram Bot Token
-const TELEGRAM_BOT_TOKEN = "7451898047:AAEo0edInxLogsU9rl6h0W0PjSQ1mg0omls";
-// Your Hugging Face API Key
-const HUGGING_FACE_API_KEY = "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";
+// Your Telegram bot token
+const token = '7451898047:AAEo0edInxLogsU9rl6h0W0PjSQ1mg0omls';
+const bot = new TelegramBot(token, { polling: true });
 
-// Initialize Hugging Face Inference Client
-const hf = new HfInference(HUGGING_FACE_API_KEY);
-
-// Initialize Telegram Bot
-const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, { polling: true });
-
-// Function to handle user messages and interact with Hugging Face API
-async function handleUserMessage(chatId, message) {
-    try {
-        // Use the chat model to process the user's message
-        const chatCompletion = await hf.chatCompletion({
-            model: "gpt-3.5-turbo", // Using a widely available model as fallback
-            messages: [
-                {
-                    role: "user",
-                    content: message
-                }
-            ],
-            provider: "openai", // If using OpenAI model
-            max_tokens: 500,
-        });
-
-        // Send the response back to the Telegram chat
-        const botResponse = chatCompletion.choices[0].message.content;
-        bot.sendMessage(chatId, botResponse);
-    } catch (error) {
-        console.error("Error handling user message:", error);
-        // Log the detailed error to help identify the issue
-        bot.sendMessage(chatId, `Sorry, something went wrong. Error: ${error.message}`);
-    }
-}
-
-// Listen for text messages
-bot.on('message', (msg) => {
-    const chatId = msg.chat.id;
-    const userMessage = msg.text;
-
-    // Send typing indicator to let the user know the bot is processing their request
-    bot.sendChatAction(chatId, "typing");
-
-    // Handle the user message and get a response from the model
-    handleUserMessage(chatId, userMessage);
+// Handle incoming messages
+bot.onText(/\/start/, (msg) => {
+  const chatId = msg.chat.id;
+  bot.sendMessage(chatId, 'Welcome! Send me a YouTube link and I will download the video for you!');
 });
 
-// Handle "/start" command
-bot.onText(/\/start/, (msg) => {
-    const chatId = msg.chat.id;
-    bot.sendMessage(chatId, "Hello! I'm your assistant bot. You can ask me questions.");
+// Handle incoming YouTube video links
+bot.on('message', (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
+
+  // Check if the message contains a YouTube link
+  if (ytdl.validateURL(text)) {
+    bot.sendMessage(chatId, 'Downloading the video... Please wait.');
+
+    // Download the YouTube video
+    const video = ytdl(text, { filter: 'audioandvideo' });
+
+    // Define a temporary file to store the video
+    const fileName = `video-${Date.now()}.mp4`;
+
+    video.pipe(fs.createWriteStream(fileName));
+
+    // Once the download is complete, send the video to the user
+    video.on('end', () => {
+      bot.sendMessage(chatId, 'Video downloaded! Sending now...');
+      bot.sendVideo(chatId, fileName)
+        .then(() => {
+          // Delete the file after sending it
+          fs.unlinkSync(fileName);
+        })
+        .catch((error) => {
+          console.error(error);
+          bot.sendMessage(chatId, 'Sorry, something went wrong. Please try again.');
+        });
+    });
+  } else {
+    bot.sendMessage(chatId, 'Please send a valid YouTube URL.');
+  }
 });
