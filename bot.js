@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const moment = require('moment-timezone');
 const momentJalaali = require('moment-jalaali');
+const numeral = require('numeral');
 
 // Replace with your bot token and target chat ID
 const token = '7770849244:AAHwUn9N11ZzgwVcSUugQD-2a-UjpVnMsGg';
@@ -28,7 +29,6 @@ function getIranianDateTime() {
 
 // Escape special characters for MarkdownV2
 function escapeMarkdown(text) {
-  if (!text) return '';
   return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
 }
 
@@ -63,7 +63,6 @@ function generateGoodbyeMessage(user) {
 
 ⏰ *زمان خروج:* ${iranianDateTime}
 
-ما امیدواریم که به زودی شما را دوباره ببینیم\\!
   `;
   return formattedMessage;
 }
@@ -120,54 +119,41 @@ function createKeyboard(page) {
       }),
     };
   }
-  return {};
 }
 
-// Handler for chat member status changes (join/leave events)
-bot.on('chat_member', async (chatMember) => {
-  try {
-    if (!isActive || chatMember.chat.id !== targetChatId) return;
-    
-    const { old_chat_member, new_chat_member } = chatMember;
-    const user = new_chat_member.user;
-    
-    // User joined the chat
-    if (old_chat_member.status === 'left' && 
-        (new_chat_member.status === 'member' || new_chat_member.status === 'administrator')) {
-      // Don't welcome the bot itself
-      if (user.id === bot.me.id) return;
-      
-      const welcomeMessage = generateWelcomeMessage(user);
-      bot.sendMessage(
-        chatMember.chat.id,
-        welcomeMessage,
-        { parse_mode: 'MarkdownV2', ...createKeyboard('welcome') }
-      ).catch(err => console.error('Error sending welcome message:', err.message));
-    }
-    
-    // User left the chat
-    if ((old_chat_member.status === 'member' || old_chat_member.status === 'administrator') && 
-        new_chat_member.status === 'left') {
-      // Don't say goodbye to the bot itself
-      if (user.id === bot.me.id) return;
-      
-      const goodbyeMessage = generateGoodbyeMessage(user);
-      bot.sendMessage(
-        chatMember.chat.id,
-        goodbyeMessage,
-        { parse_mode: 'MarkdownV2' }
-      ).catch(err => console.error('Error sending goodbye message:', err.message));
-    }
-  } catch (error) {
-    console.error('Error handling chat member update:', error);
-  }
-});
-
-// Legacy handler for new chat members (for backward compatibility)
+// Handler for new chat members and left chat members
 bot.on('message', async (msg) => {
   try {
     // Ensure the bot only operates in the specified chat
     if (!isActive || msg.chat.id !== targetChatId) return;
+
+    // Detect new chat members
+    if (msg.new_chat_members && msg.new_chat_members.length > 0) {
+      for (const user of msg.new_chat_members) {
+        // Don't welcome the bot itself
+        if (user.id === bot.me.id) continue;
+        
+        const welcomeMessage = generateWelcomeMessage(user);
+        bot.sendMessage(
+          msg.chat.id,
+          welcomeMessage,
+          { parse_mode: 'MarkdownV2', ...createKeyboard('welcome') }
+        ).catch(err => console.error('Error sending welcome message:', err.message));
+      }
+    }
+    
+    // Detect users leaving the chat
+    if (msg.left_chat_member) {
+      // Don't say goodbye to the bot itself
+      if (msg.left_chat_member.id === bot.me.id) return;
+      
+      const goodbyeMessage = generateGoodbyeMessage(msg.left_chat_member);
+      bot.sendMessage(
+        msg.chat.id,
+        goodbyeMessage,
+        { parse_mode: 'MarkdownV2' }
+      ).catch(err => console.error('Error sending goodbye message:', err.message));
+    }
 
     // Detect and set the owner/admins when the bot starts
     if (!ownerID && msg.chat.id === targetChatId) {
