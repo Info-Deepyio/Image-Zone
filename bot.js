@@ -4,8 +4,9 @@ const numeral = require('numeral'); // For number formatting
 
 // Replace with your bot token and target chat ID
 const token = '7770849244:AAHwUn9N11ZzgwVcSUugQD-2a-UjpVnMsGg';
-const targetChatId =-1002286986056; // Example: -1001234567890
+const targetChatId = -1002286986056; // Target group chat ID
 let isActive = false;
+let ownerID = null; // To store the owner's user ID
 
 // Initialize the bot
 const bot = new TelegramBot(token, { polling: true });
@@ -71,7 +72,7 @@ function createKeyboard(page) {
 }
 
 // Handler for new chat members
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
   if (!isActive || msg.chat.id !== targetChatId) return;
 
   if (msg.new_chat_members) {
@@ -83,6 +84,20 @@ bot.on('message', (msg) => {
         createKeyboard('welcome')
       );
     });
+  }
+
+  // Detect and set the owner/admins when the bot starts
+  if (!ownerID && msg.chat.id === targetChatId) {
+    try {
+      const admins = await bot.getChatAdministrators(targetChatId);
+      const creator = admins.find((admin) => admin.status === 'creator');
+      if (creator) {
+        ownerID = creator.user.id;
+        console.log(`Owner detected: ${ownerID}`);
+      }
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+    }
   }
 });
 
@@ -110,14 +125,30 @@ bot.on('callback_query', (query) => {
 });
 
 // Activation command
-bot.onText(/\/start|فعال/, (msg) => {
+bot.onText(/\/start|فعال/, async (msg) => {
   if (msg.chat.id !== targetChatId) return;
 
-  if (msg.from.id === OWNER_ID) { // Replace OWNER_ID with the actual owner's ID
+  // Ensure only the owner can activate the bot
+  if (!ownerID) {
+    try {
+      const admins = await bot.getChatAdministrators(targetChatId);
+      const creator = admins.find((admin) => admin.status === 'creator');
+      if (creator) {
+        ownerID = creator.user.id;
+        console.log(`Owner detected: ${ownerID}`);
+      }
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+    }
+  }
+
+  if (msg.from.id === ownerID) {
     if (!isActive) {
       isActive = true;
       bot.sendMessage(msg.chat.id, '🤖 **ربات فعال شد!** ✅');
     }
+  } else {
+    bot.sendMessage(msg.chat.id, '⚠️ فقط صاحب گروه می‌تواند ربات را فعال کند.');
   }
 });
 
