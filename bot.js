@@ -7,6 +7,7 @@ const token = '7770849244:AAHwUn9N11ZzgwVcSUugQD-2a-UjpVnMsGg';
 const targetChatId = -1002286986056; // Target group chat ID
 let isActive = false;
 let ownerID = null; // To store the owner's user ID
+let isActivatedOnce = false; // Flag to track if the bot has been activated once
 
 // Initialize the bot
 const bot = new TelegramBot(token, { polling: true });
@@ -25,31 +26,31 @@ function getIranianDateTime() {
   return `${toPersianNumerals(jalaliDate)} ساعت ${toPersianNumerals(time)}`;
 }
 
-// Welcome message
+// Welcome message with fixed bold formatting (MarkdownV2)
 function generateWelcomeMessage(user) {
   const iranianDateTime = getIranianDateTime();
   const formattedMessage = `
-🌟 **خوش آمدید، عزیز** ${user.first_name}! 🌟
+🌟 *خوش آمدید، عزیز* ${user.first_name}! 🌟
 
-⏰ **زمان ورود شما:** ${iranianDateTime}
+⏰ *زمان ورود شما:* ${iranianDateTime}
 
-✨ ما خوشحالیم که شما به این گروه پیوستید. امیدواریم زمان لذت‌بخشی در اینجا سپری کنید!
+✨ ما خوشحالیم که شما به این گروه پیوستید\. امیدواریم زمان لذت\-بخشی در اینجا سپری کنید\!
 
-💡 برای مشاهده هدف و معرفی گروه، دکمه » را کلیک کنید.
+💡 برای مشاهده هدف و معرفی گروه، دکمه » را کلیک کنید\.
   `;
   return formattedMessage;
 }
 
-// Group purpose message
+// Group purpose message with fixed bold formatting (MarkdownV2)
 function generatePurposeMessage() {
   const formattedMessage = `
-🎮 **هدف و معرفی گروه:**
+🎮 *هدف و معرفی گروه:*
 
-🌟 این گروه فضایی است برای **چت کردن با دوستان و مردمی که از بازی ماینکرفت خوششان می‌آید**. 
+🌟 این گروه فضایی است برای **چت کردن با دوستان و مردمی که از بازی ماینکرفت خوششان می\-آید**\. 
 
-🎉 اینجا جایی است که می‌توانید تجربیات خود را به اشتراک بگذارید، نظرات خود را ابراز کنید و با افرادی که علاقه‌مند به ماینکرفت هستند، تعامل داشته باشید.
+🎉 اینجا جایی است که می\-توانید تجربیات خود را به اشتراک بگذارید، نظرات خود را ابراز کنید و با افرادی که علاقه\-مند به ماینکرفت هستند، تعامل داشته باشید\.
 
-💡 برای بازگشت به پیام خوش آمدگویی، دکمه « را کلیک کنید.
+💡 برای بازگشت به پیام خوش آمدگویی، دکمه « را کلیک کنید\.
   `;
   return formattedMessage;
 }
@@ -81,7 +82,7 @@ bot.on('message', async (msg) => {
       bot.sendMessage(
         msg.chat.id,
         welcomeMessage,
-        createKeyboard('welcome')
+        { parse_mode: 'MarkdownV2', ...createKeyboard('welcome') }
       );
     });
   }
@@ -120,6 +121,7 @@ bot.on('callback_query', (query) => {
   bot.editMessageText(messageText, {
     chat_id: query.message.chat.id,
     message_id: query.message.message_id,
+    parse_mode: 'MarkdownV2',
     ...keyboard,
   });
 });
@@ -143,12 +145,14 @@ bot.onText(/\/start|فعال/, async (msg) => {
   }
 
   if (msg.from.id === ownerID) {
-    if (!isActive) {
+    if (!isActivatedOnce) {
       isActive = true;
-      bot.sendMessage(msg.chat.id, '🤖 **ربات فعال شد!** ✅');
+      isActivatedOnce = true;
+      bot.sendMessage(msg.chat.id, '*🤖 ربات فعال شد\!* ✅', { parse_mode: 'MarkdownV2' });
     }
+    // Do not respond if already activated
   } else {
-    bot.sendMessage(msg.chat.id, '⚠️ فقط صاحب گروه می‌تواند ربات را فعال کند.');
+    bot.sendMessage(msg.chat.id, '⚠️ فقط صاحب گروه می‌تواند ربات را فعال کند\.', { parse_mode: 'MarkdownV2' });
   }
 });
 
@@ -159,11 +163,11 @@ function sendMidnightGreeting() {
   const currentTime = moment().tz('Asia/Tehran').format('HH:mm');
   if (currentTime === '00:00') {
     const midnightMessage = `
-🌙 ** شب بخیر! ** 🌙
+🌙 *شب بخیر\!* 🌙
 
-💤 امیدواریم شبی آرام و خوشبخت برای شما در پی داشته باشد. خواب خوب 💤
+💤 امیدواریم شبی آرام و خوشبخت برای شما در پی داشته باشد\. خواب خوب 💤
     `;
-    bot.sendMessage(targetChatId, midnightMessage);
+    bot.sendMessage(targetChatId, midnightMessage, { parse_mode: 'MarkdownV2' });
   }
 }
 
