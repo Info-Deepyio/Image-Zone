@@ -1,14 +1,14 @@
 const TelegramBot = require('node-telegram-bot-api');
-const moment = require('moment-timezone'); // Changed to moment-timezone
-const momentJalaali = require('moment-jalaali'); // For Iranian calendar
-const numeral = require('numeral'); // For number formatting
+const moment = require('moment-timezone');
+const momentJalaali = require('moment-jalaali');
+const numeral = require('numeral');
 
 // Replace with your bot token and target chat ID
 const token = '7770849244:AAHwUn9N11ZzgwVcSUugQD-2a-UjpVnMsGg';
-const targetChatId = -1002286986056; // Target group chat ID
+const targetChatId = -1002286986056;
 let isActive = false;
-let ownerID = null; // To store the owner's user ID
-let isActivatedOnce = false; // Flag to track if the bot has been activated once
+let ownerID = null;
+let isActivatedOnce = false;
 
 // Initialize the bot
 const bot = new TelegramBot(token, { polling: true });
@@ -27,19 +27,45 @@ function getIranianDateTime() {
   return `${toPersianNumerals(jalaliDate)} ساعت ${toPersianNumerals(time)}`;
 }
 
+// Escape special characters for MarkdownV2
+function escapeMarkdown(text) {
+  return text.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&');
+}
+
 // Welcome message with fixed bold formatting (MarkdownV2)
 function generateWelcomeMessage(user) {
   const iranianDateTime = getIranianDateTime();
-  const userName = user.first_name ? user.first_name.replace(/[_*[\]()~`>#+\-=|{}.!]/g, '\\$&') : 'دوست عزیز';
+  const userName = user.first_name ? escapeMarkdown(user.first_name) : 'دوست عزیز';
+  const lastName = user.last_name ? escapeMarkdown(user.last_name) : '';
+  const fullName = lastName ? `${userName} ${lastName}` : userName;
   
   const formattedMessage = `
-🌟 *خوش آمدید، عزیز* ${userName}\\! 🌟
+🌟 *خوش آمدید، ${fullName}*\\! 🌟
 
 ⏰ *زمان ورود شما:* ${iranianDateTime}
 
 ✨ ما خوشحالیم که شما به این گروه پیوستید\\. امیدواریم زمان لذت\\-بخشی در اینجا سپری کنید\\!
 
 💡 برای مشاهده هدف و معرفی گروه، دکمه » را کلیک کنید\\.
+  `;
+  return formattedMessage;
+}
+
+// Goodbye message for when users leave
+function generateGoodbyeMessage(user) {
+  const iranianDateTime = getIranianDateTime();
+  const userName = user.first_name ? escapeMarkdown(user.first_name) : 'دوست';
+  const lastName = user.last_name ? escapeMarkdown(user.last_name) : '';
+  const fullName = lastName ? `${userName} ${lastName}` : userName;
+  
+  const formattedMessage = `
+🙋‍♂️ *خداحافظ، ${fullName}*\\! 🙋‍♂️
+
+⏰ *زمان خروج:* ${iranianDateTime}
+
+😢 متأسفیم که شما گروه را ترک کردید\\. امیدواریم دوباره به ما بپیوندید\\!
+
+🌈 سفر خوبی داشته باشید\\. درهای ما همیشه به روی شما باز است\\.
   `;
   return formattedMessage;
 }
@@ -75,22 +101,38 @@ function createKeyboard(page) {
   }
 }
 
-// Handler for new chat members
+// Handler for new chat members and left chat members
 bot.on('message', async (msg) => {
   try {
     // Ensure the bot only operates in the specified chat
     if (!isActive || msg.chat.id !== targetChatId) return;
 
     // Detect new chat members
-    if (msg.new_chat_members) {
-      msg.new_chat_members.forEach((user) => {
+    if (msg.new_chat_members && msg.new_chat_members.length > 0) {
+      for (const user of msg.new_chat_members) {
+        // Don't welcome the bot itself
+        if (user.id === bot.me.id) continue;
+        
         const welcomeMessage = generateWelcomeMessage(user);
         bot.sendMessage(
           msg.chat.id,
           welcomeMessage,
           { parse_mode: 'MarkdownV2', ...createKeyboard('welcome') }
         ).catch(err => console.error('Error sending welcome message:', err.message));
-      });
+      }
+    }
+    
+    // Detect users leaving the chat
+    if (msg.left_chat_member) {
+      // Don't say goodbye to the bot itself
+      if (msg.left_chat_member.id === bot.me.id) return;
+      
+      const goodbyeMessage = generateGoodbyeMessage(msg.left_chat_member);
+      bot.sendMessage(
+        msg.chat.id,
+        goodbyeMessage,
+        { parse_mode: 'MarkdownV2' }
+      ).catch(err => console.error('Error sending goodbye message:', err.message));
     }
 
     // Detect and set the owner/admins when the bot starts
@@ -123,7 +165,7 @@ bot.on('callback_query', async (query) => {
       messageText = generatePurposeMessage();
       keyboard = createKeyboard('purpose');
     } else if (data === 'welcome') {
-      // Check if reply_to_message exists before accessing
+      // Use the user who clicked the button
       const user = query.from;
       messageText = generateWelcomeMessage(user);
       keyboard = createKeyboard('welcome');
@@ -201,6 +243,14 @@ function sendMidnightGreeting() {
 setInterval(() => {
   sendMidnightGreeting();
 }, 60000);
+
+// Initialize bot and get bot's own info
+bot.getMe().then((botInfo) => {
+  bot.me = botInfo;
+  console.log(`Bot initialized: @${botInfo.username}`);
+}).catch(error => {
+  console.error('Error initializing bot:', error);
+});
 
 // Log polling errors
 bot.on('polling_error', (error) => {
