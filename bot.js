@@ -5,7 +5,7 @@ const numeral = require('numeral');
 
 // Replace with your bot token and target chat ID
 const token = '7770849244:AAHwUn9N11ZzgwVcSUugQD-2a-UjpVnMsGg';
-const targetChatId = -1002286986056;
+const targetChatId = -1002307718681;
 let isActive = false;
 let ownerID = null;
 let isActivatedOnce = false;
