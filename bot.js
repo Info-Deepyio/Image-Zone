@@ -1,5 +1,5 @@
-import { HfInference } from "@huggingface/inference";
-import TelegramBot from "node-telegram-bot-api";
+const { HfInference } = require('@huggingface/inference');
+const TelegramBot = require('node-telegram-bot-api');
 
 // Your Telegram Bot Token
 const TELEGRAM_BOT_TOKEN = "7451898047:AAEo0edInxLogsU9rl6h0W0PjSQ1mg0omls";
@@ -17,14 +17,14 @@ async function handleUserMessage(chatId, message) {
     try {
         // Use the chat model to process the user's message
         const chatCompletion = await hf.chatCompletion({
-            model: "deepseek-ai/DeepSeek-R1",
+            model: "gpt-3.5-turbo", // Using a widely available model as fallback
             messages: [
                 {
                     role: "user",
                     content: message
                 }
             ],
-            provider: "together",
+            provider: "openai", // If using OpenAI model
             max_tokens: 500,
         });
 
@@ -33,12 +33,13 @@ async function handleUserMessage(chatId, message) {
         bot.sendMessage(chatId, botResponse);
     } catch (error) {
         console.error("Error handling user message:", error);
-        bot.sendMessage(chatId, "Sorry, something went wrong. Please try again later.");
+        // Log the detailed error to help identify the issue
+        bot.sendMessage(chatId, `Sorry, something went wrong. Error: ${error.message}`);
     }
 }
 
 // Listen for text messages
-bot.on("message", (msg) => {
+bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const userMessage = msg.text;
 
