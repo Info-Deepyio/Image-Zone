@@ -1,4 +1,3 @@
-javascript
 const TelegramBot = require('node-telegram-bot-api');
 const moment = require('moment-timezone'); // Changed to moment-timezone
 const momentJalaali = require('moment-jalaali'); // For Iranian calendar
